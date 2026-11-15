@@ -70,6 +70,9 @@ TS=$(date +%Y%m%d-%H%M%S)
 ARCHIVE="staff/archive/$TS"
 mkdir -p "$ARCHIVE"
 
+# Старый план нужен как контекст даже после архивации.
+if [ -f staff/sprints.json ]; then cp staff/sprints.json "staff/backups/sprints-$TS.json"; fi
+
 # Всегда архивируем старый план, журнал, аудиты и артефакты спринтов.
 for item in sprints.json sprints-done.json coverage current-sprint sprints; do
   if [ -e "staff/$item" ]; then mv "staff/$item" "$ARCHIVE/"; fi
@@ -106,7 +109,7 @@ printf '%s\n' "$TS" > staff/backups/last-archive.txt
 
 Общие правила (`instructions/coverage.md`, `testing.md`, `design.md`) уже внедрены в контекст — не перечитывай их без необходимости.
 
-Если `staff/sprints.json` существует — просмотри его только как контекст проекта; формат и гранулярность бери из схемы ниже.
+Если `staff/sprints.json` существует — просмотри его только как контекст проекта; формат и гранулярность бери из схемы ниже. Если файл уже убран в архив, используй последний `staff/backups/sprints-*.json`.
 
 ## 3. Раунды уточнений (question)
 
