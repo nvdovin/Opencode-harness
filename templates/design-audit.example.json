@@ -1,0 +1,62 @@
+{
+  "base_url": "http://localhost:8000",
+  "viewports": [
+    {"name": "mobile", "width": 375, "height": 812},
+    {"name": "tablet", "width": 768, "height": 1024},
+    {"name": "desktop", "width": 1440, "height": 900}
+  ],
+  "routes": [
+    {"path": "/", "name": "home", "auth": "guest"},
+    {"path": "/about/", "name": "about", "auth": "guest"},
+    {"path": "/dashboard/users/", "name": "users", "auth": "admin"}
+  ],
+  "auth": {
+    "guest": {},
+    "user": {
+      "login_url": "/login/",
+      "phone_selector": "input[name='phone_number']",
+      "password_selector": "input[name='password']",
+      "submit_selector": "button[type='submit']",
+      "phone": "<test-user-phone>",
+      "password": "<test-user-password>"
+    },
+    "admin": {
+      "login_url": "/login/",
+      "phone_selector": "input[name='phone_number']",
+      "password_selector": "input[name='password']",
+      "submit_selector": "button[type='submit']",
+      "phone": "<test-admin-phone>",
+      "password": "<test-admin-password>"
+    }
+  },
+  "thresholds": {
+    "min_touch": 44,
+    "min_text_measure": 45,
+    "max_text_measure": 75,
+    "max_distinct_colors": 12,
+    "max_font_families": 2,
+    "max_font_weights": 3,
+    "max_shadows": 3,
+    "max_gradients": 1,
+    "container_tolerance": 2,
+    "overlap_tolerance": 2,
+    "spacing_scale": [4, 8, 12, 16, 24, 32, 48, 64, 96]
+  },
+  "token_names": [
+    "--color-bg",
+    "--color-surface",
+    "--color-text",
+    "--color-muted",
+    "--color-border",
+    "--color-accent",
+    "--color-accent-contrast",
+    "--color-danger",
+    "--color-success",
+    "--color-focus"
+  ],
+  "static_scan": {
+    "css": ["static/css/**/*.css"],
+    "html": ["templates/**/*.html"],
+    "js": ["static/js/**/*.js"]
+  }
+}

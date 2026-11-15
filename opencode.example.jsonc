@@ -1,0 +1,35 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "subagent_depth": 4,
+  "plugin": [
+    "~/.config/opencode/plugin/telegram-bridge.ts"
+  ],
+  "instructions": [
+    "~/.config/opencode/instructions/questions.md",
+    "~/.config/opencode/instructions/coverage.md",
+    "~/.config/opencode/instructions/testing.md",
+    "~/.config/opencode/instructions/design.md"
+  ],
+  "agent": {
+    "build": { "mode": "primary" },
+    "plan": { "mode": "primary" },
+    "general": { "mode": "subagent" },
+    "explore": { "mode": "subagent" },
+    "scout": { "mode": "subagent" },
+    "compaction": { "mode": "primary", "disabled": true },
+    "title": { "mode": "primary", "disabled": true },
+    "summary": { "mode": "primary", "disabled": true },
+    "concept-sprint-planner": { "mode": "subagent" },
+    "concept-coverage-auditor": { "mode": "subagent" },
+    "ui-design-reviewer": { "mode": "subagent" },
+    "sprint-planner": { "mode": "subagent" },
+    "sprint-implementer": { "mode": "subagent" },
+    "sprint-reviewer": { "mode": "subagent" },
+    "sprint-orchestrator": { "mode": "subagent" }
+  },
+  "permission": {
+    "edit": "ask",
+    "external_directory": "ask",
+    "question": "allow"
+  }
+}

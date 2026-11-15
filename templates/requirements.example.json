@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "source": "staff/concept.md",
+  "legacy": false,
+  "decisions": [
+    {
+      "id": "D-001",
+      "question": "Нужна ли тёмная тема в MVP?",
+      "answer": "Нет, позже.",
+      "date": "2026-01-01"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R-001",
+      "title": "Медиа доступно при любом входе",
+      "quote": "медиа (/media/...) доступно при любом способе входа — и через nginx, и напрямую через gunicorn",
+      "source_ref": "concept.md#1",
+      "type": "functional",
+      "priority": "must",
+      "acceptance": "GET /media/<file> на :8000 и :80 возвращает 200 и корректный Content-Type",
+      "status": "planned",
+      "design": false
+    },
+    {
+      "id": "R-002",
+      "title": "Единый визуальный язык",
+      "quote": "максимум симметрии, минимум шумов, нейтральная палитра",
+      "source_ref": "concept.md#design",
+      "type": "design",
+      "priority": "must",
+      "acceptance": "design-brief утверждён; ui-design-reviewer PASS на 375/768/1440; нет нестилизованных контролов",
+      "status": "planned",
+      "design": true
+    },
+    {
+      "id": "R-003",
+      "title": "Не ломать существующие тесты",
+      "quote": "не ломать существующие 1317+ тестов",
+      "source_ref": "concept.md#8",
+      "type": "test",
+      "priority": "must",
+      "acceptance": "full-профиль зелёный; число тестов не ниже baseline",
+      "status": "planned",
+      "design": false
+    },
+    {
+      "id": "R-004",
+      "title": "Тёмная тема",
+      "quote": "тёмная тема — позже",
+      "source_ref": "decisions.md#D-001",
+      "type": "constraint",
+      "priority": "won't",
+      "acceptance": "явный non-goal, не входит в текущий план",
+      "status": "non_goal",
+      "design": true
+    },
+    {
+      "id": "R-005",
+      "title": "Экспорт в PDF",
+      "quote": "хорошо бы когда-нибудь экспорт в PDF",
+      "source_ref": "concept.md#backlog",
+      "type": "functional",
+      "priority": "could",
+      "acceptance": "backlog, реализация не входит в текущий план",
+      "status": "backlog",
+      "design": false
+    }
+  ]
+}

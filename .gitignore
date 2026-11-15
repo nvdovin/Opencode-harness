@@ -1,0 +1,16 @@
+# Секреты и локальное состояние
+.env
+notify.env
+service.json
+cli.json
+*.log
+.telegram-notifier-state*
+.backups/
+
+# Зависимости и артефакты
+node_modules/
+bun.lock
+
+# Локальные бэкапы конфигурации
+opencode.jsonc.bak-*
+*.bak-*

@@ -1,0 +1,55 @@
+{
+  "profiles": {
+    "fast": {
+      "command": [
+        ".venv/bin/python", "manage.py", "test",
+        "--settings=config.settings.test_fast",
+        "--keepdb", "--parallel", "2", "--verbosity=1"
+      ],
+      "timeout": 180,
+      "budget_seconds": 60
+    },
+    "affected": {
+      "command": [
+        ".venv/bin/python", "manage.py", "test",
+        "--settings=config.settings.test_fast",
+        "--keepdb", "--parallel", "2", "--verbosity=1",
+        "{targets}"
+      ],
+      "timeout": 600,
+      "budget_seconds": 300
+    },
+    "full": {
+      "command": [
+        ".venv/bin/python", "manage.py", "test",
+        "--settings=config.settings.test_fast",
+        "--keepdb", "--parallel", "2", "--verbosity=1"
+      ],
+      "timeout": 1800,
+      "budget_seconds": 600
+    },
+    "e2e": {
+      "command": ".venv/bin/python e2e/playwright_scenarios.py",
+      "timeout": 900,
+      "budget_seconds": 300
+    }
+  },
+  "test_map": {
+    "accounts/**": ["accounts", "tests.test_route_matrix"],
+    "content/**": ["content", "tests.test_route_matrix"],
+    "ministries/**": ["ministries", "tests.test_route_matrix"],
+    "knowledge/**": ["knowledge", "tests.test_route_matrix"],
+    "tasks/**": ["tasks", "tests.test_route_matrix"],
+    "templates/**": ["tests.test_design_regression", "tests.test_a11y"],
+    "static/css/**": ["tests.test_design_regression", "tests.test_design_tokens"],
+    "static/js/**": ["tests.test_js_bugs", "tests.test_a11y"],
+    "config/urls.py": ["tests.test_route_matrix", "tests.test_release_smoke"]
+  },
+  "full_if_changed": [
+    "**/models.py",
+    "**/migrations/**",
+    "**/settings/**",
+    "**/urls.py",
+    "templates/base.html"
+  ]
+}
