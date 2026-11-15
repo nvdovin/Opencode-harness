@@ -57,8 +57,26 @@ permission:
 ```bash
 python3 ~/.config/opencode/scripts/coverage_check.py --mode spec --sprint N
 python3 ~/.config/opencode/scripts/coverage_check.py --mode final --strict-final
+python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash
 python3 ~/.config/opencode/scripts/run_profile.py --profile full --reuse-green-full
 ```
+
+### Свежесть аудита (обязательно)
+
+Перед тем как считать гейт пройденным, вычисли текущий хэш плана и проверь,
+что отчёт аудита относится именно к нему:
+
+```bash
+CURRENT_HASH=$(python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash)
+grep -q "plan_hash: ${CURRENT_HASH}" staff/coverage/sprint-N-audit.md \
+  && grep -q "COVERAGE: PASS" staff/coverage/sprint-N-audit.md
+```
+
+Для `plan-audit.md` и `final-audit.md` — то же самое. Если файл есть, но
+`plan_hash` другой или строки нет — это stale-аудит: запусти аудитора заново,
+старый PASS не принимай. После любого изменения `requirements.json`,
+`sprints.json`, `design-brief.md` или `test-strategy.*` все аудиты плана
+считаются устаревшими.
 
 ## Уведомления (единственный бот — OpenCoder)
 
@@ -126,13 +144,13 @@ task(subagent_type="sprint-planner", prompt="Запусти свой штатн�
   - **Контрольная проверка очистки:** прочитай `staff/current-sprint/current-sprint.md` и убедись, что номер спринта в ней **отличается** от номера предыдущего круга (для первого круга — просто зафиксируй номер). Если номер совпал со старым или файл отсутствует — это сбой конвейера: повтори вызов planner один раз; при повторном сбое — уведомление через `notify.py` и остановка.
   - Зафиксируй номер нового текущего спринта и переходи к **1.2**.
 
-**1.1a. Аудит ТЗ (гейт)** — если для текущего спринта ещё нет `staff/coverage/sprint-<N>-audit.md` с `COVERAGE: PASS`, вызови:
+**1.1a. Аудит ТЗ (гейт)** — если для текущего спринта нет **свежего** аудита (файл `staff/coverage/sprint-<N>-audit.md` содержит `COVERAGE: PASS` и `plan_hash`, совпадающий с `--print-plan-hash`), вызови:
 
 ```
-task(subagent_type="concept-coverage-auditor", prompt="MODE: spec N. Проверь staff/current-sprint/spec.md и criteria.md: все R-ID из requirement_map спринта присутствуют, у каждого есть проверяемый критерий, есть разделы «Трассировка требований», «Дизайн-контракт» (если UI), «Тестовая стратегия». Запусти coverage_check.py --mode spec --sprint N. Верни COVERAGE: PASS/FAIL и пробелы.")
+task(subagent_type="concept-coverage-auditor", prompt="MODE: spec N. Проверь staff/current-sprint/spec.md и criteria.md: все R-ID из requirement_map спринта присутствуют, у каждого есть проверяемый критерий, есть разделы «Трассировка требований», «Дизайн-контракт» (если UI), «Тестовая стратегия». Запусти coverage_check.py --mode spec --sprint N и coverage_check.py --mode plan --print-plan-hash; запиши plan_hash в отчёт. Верни COVERAGE: PASS/FAIL и пробелы.")
 ```
 
-При FAIL — перезапусти `sprint-planner` с пробелами один раз, затем аудит снова. Повторный FAIL — TG и пауза. Не запускай implementer без PASS. Если `requirements.json`/`requirement_map` отсутствует — это легаси-спринт: аудитор фиксирует `legacy_no_traceability`, и гейт не блокирует только из-за отсутствия R-ID.
+При FAIL — перезапусти `sprint-planner` с пробелами один раз, затем аудит снова. Повторный FAIL — уведомление и пауза. Не запускай implementer без PASS. Если `requirements.json`/`requirement_map` отсутствует — это легаси-спринт: аудитор фиксирует `legacy_no_traceability`, и гейт не блокирует только из-за отсутствия R-ID.
 
 **1.2. Реализация** — вызови:
 
@@ -235,9 +253,9 @@ task(subagent_type="sprint-planner", prompt="ВОЛНОВОЙ РЕЖИМ. Спл
 
 ### Фаза A2 — аудит ТЗ
 
-Для каждого незакрытого спринта волны, у которого ещё нет `staff/coverage/sprint-<N>-audit.md` с `COVERAGE: PASS`, запусти `concept-coverage-auditor` в режиме `spec N` (пачками ≤ `max_parallel`, одним сообщением). Промпт: номер спринта, путь `staff/sprints/sprint-<N>/`, требование проверить R-ID, spec/criteria, дизайн-контракт и тестовую стратегию; вернуть `COVERAGE: PASS/FAIL` и пробелы.
+Для каждого незакрытого спринта волны, у которого ещё нет **свежего** аудита (файл `staff/coverage/sprint-<N>-audit.md` содержит `COVERAGE: PASS` и `plan_hash`, совпадающий с `--print-plan-hash`), запусти `concept-coverage-auditor` в режиме `spec N` (пачками ≤ `max_parallel`, одним сообщением). Промпт: номер спринта, путь `staff/sprints/sprint-<N>/`, требование проверить R-ID, spec/criteria, дизайн-контракт и тестовую стратегию; запустить `coverage_check.py --mode spec --sprint N` и `--print-plan-hash`; записать `plan_hash` в отчёт; вернуть `COVERAGE: PASS/FAIL` и пробелы.
 
-При FAIL — перезапусти planner для этого спринта с пробелами один раз, затем аудит снова. Повторный FAIL — TG (волна W, спринт N) и пауза. Не переходи к фазе B/C без PASS. Для легаси-спринта без ledger — `legacy_no_traceability`, без блокировки только из-за R-ID.
+При FAIL — перезапусти planner для этого спринта с пробелами один раз, затем аудит снова. Повторный FAIL — уведомление (волна W, спринт N) и пауза. Не переходи к фазе B/C без PASS. Для легаси-спринта без ledger — `legacy_no_traceability`, без блокировки только из-за R-ID.
 
 ### Фаза B — регистрация
 
@@ -313,13 +331,13 @@ PY
 task(subagent_type="sprint-implementer", prompt="ВОЛНОВОЙ РЕЖИМ. Спринт N, линия lane-X. Работай в директории staff/sprints/sprint-N/ (артефакты, включая changelist.lane-X.md, — только туда). Твои files_owned: <список>; R-ID линии: <список>; файлы вне files_owned только читай. Общие операции (миграции, общая БД, shared_ops) — исключительно под flock staff/.wave-shared.lock -c '<команда>'. Тест-сервер: порт 8100+N. Тесты — targeted/fast по staff/test-strategy.json, без full. В staff/sprints-done.json НЕ пиши. Выполняй задачи линии последовательно до закрытия критериев и R-ID.")
 ```
 
-Дождись завершения **всех** задач пачки, затем запускай следующую. Ошибка запуска `task` (сбой запуска, а не блокер спринта) → повтори вызов один раз; при повторном сбое — TG (волна W, спринт N, линия) и завершение с паузой. Если implementer остановился с незакрытыми критериями линии — это не блокер здесь: вердикт зафиксирует ревью в фазе D.
+Дождись завершения **всех** задач пачки, затем запускай следующую. Ошибка запуска `task` (сбой запуска, а не блокер спринта) → повтори вызов один раз; при повторном сбое — уведомление (волна W, спринт N, линия) и завершение с паузой. Если implementer остановился с незакрытыми критериями линии — это не блокер здесь: вердикт зафиксирует ревью в фазе D.
 
 ### Фаза C2 — дизайн-ревью
 
 Только после завершения всех implementer-задач фазы C. Для каждого незакрытого UI-спринта волны запусти `ui-design-reviewer` в режиме `review` (пачками ≤ `max_parallel`, одним сообщением). Промпт: номер спринта, путь `staff/sprints/sprint-<N>/`, `design-brief.md`, `design-audit.json`, порт `8100+N`, `files_owned` линий; вернуть `DESIGN: PASS/FAIL` + blockers/majors/minors.
 
-При FAIL — передай blockers/majors implementer-у (с соблюдением `files_owned`), затем повтори дизайн-ревью. Повторный FAIL — TG (волна W, спринт N) и пауза. Если UI не менялся — `DESIGN: N/A — no UI changes`. В фазу D передай вердикт дизайна вместе с отчётом.
+При FAIL — передай blockers/majors implementer-у (с соблюдением `files_owned`), затем повтори дизайн-ревью. Повторный FAIL — уведомление (волна W, спринт N) и пауза. Если UI не менялся — `DESIGN: N/A — no UI changes`. В фазу D передай вердикт дизайна вместе с отчётом.
 
 ### Фаза D — ревью
 
@@ -334,13 +352,13 @@ task(subagent_type="sprint-implementer", prompt="ВОЛНОВОЙ РЕЖИМ. С
 - требование вернуть текстовый вердикт строго вида `Спринт N: ПРОЙДЕН/НЕ ПРОЙДЕН (причины)`;
 - запрет трогать `staff/sprints-done.json` (закрытие спринта — работа оркестратора в фазе E).
 
-Ошибка/пустой ответ → повтор один раз, затем TG (волна W, спринт N) и пауза.
+Ошибка/пустой ответ → повтор один раз, затем уведомление (волна W, спринт N) и пауза.
 
 ### Фаза E — фиксация
 
 1. Перечитай вердикты фазы D из отчётов reviewer-ов; при расхождении или пустом вердикте сверься с `staff/sprints/sprint-<N>/review.md`.
 2. Атомарно (та же python-схема из фазы B, `wave_sprints = []`, `set_completed = [<номера спринтов с вердиктом ПРОЙДЕН>]`) выставь `is_completed: true` успешным спринтам волны. **Сначала обязательно записывай успехи** — даже если волна содержит провалы.
-3. Если есть провалы (`НЕ ПРОЙДЕН`): после записи успехов отправь TG (волна W, спринт N, причины из вердикта или `staff/sprints/sprint-<N>/review.md`) и завершись с паузой — по схеме «Обработка блокера (легаси-режим)», но с контекстом волны. Успешные спринты остаются закрытыми; при перезапуске конвейер продолжит с места остановки.
+3. Если есть провалы (`НЕ ПРОЙДЕН`): после записи успехов отправь уведомление (волна W, спринт N, причины из вердикта или `staff/sprints/sprint-<N>/review.md`) и завершись с паузой — по схеме «Обработка блокера (легаси-режим)», но с контекстом волны. Успешные спринты остаются закрытыми; при перезапуске конвейер продолжит с места остановки.
 4. Если все спринты волны ПРОЙДЕНЫ — переходи к фазе F.
 
 ### Фаза F — пост-валидация волны
@@ -349,18 +367,18 @@ task(subagent_type="sprint-implementer", prompt="ВОЛНОВОЙ РЕЖИМ. С
    ```bash
    python3 ~/.config/opencode/scripts/run_profile.py --profile full --reuse-green-full --root .
    ```
-   Полный сьют — один раз на волну. Если профиль не настроен — используй команду из `staff/test-strategy.md`; не хардкодь `manage.py test` для любого проекта и не запускай full в параллельных ревьюерах. Падение = блокер: TG (волна W, причина) и завершение с паузой.
+   Полный сьют — один раз на волну. Если профиль не настроен — используй команду из `staff/test-strategy.md`; не хардкодь `manage.py test` для любого проекта и не запускай full в параллельных ревьюерах. Падение = блокер: уведомление (волна W, причина) и завершение с паузой.
 2. **Финальный аудит покрытия:** вызови `concept-coverage-auditor` в режиме `final`:
    ```
-   task(subagent_type="concept-coverage-auditor", prompt="MODE: final. Проверь staff/requirements.json, sprints.json, changelist/review/design-review всех спринтов волны W. У каждого must/should должно быть доказательство; дизайн-требования — DESIGN: PASS. Запусти coverage_check.py --mode final --strict-final. Верни COVERAGE: PASS/FAIL и пробелы.")
+   task(subagent_type="concept-coverage-auditor", prompt="MODE: final. Проверь staff/requirements.json, sprints.json, changelist/review/design-review всех спринтов волны W. У каждого must/should должно быть доказательство; дизайн-требования — DESIGN: PASS. Запусти coverage_check.py --mode final --strict-final и coverage_check.py --mode plan --print-plan-hash; запиши plan_hash в final-audit.md. Верни COVERAGE: PASS/FAIL и пробелы.")
    ```
-   При FAIL — пауза + TG; успешные спринты остаются закрытыми, следующая волна не стартует.
+   При FAIL — пауза + уведомление; успешные спринты остаются закрытыми, следующая волна не стартует. Перед продолжением проверь, что `final-audit.md` содержит `plan_hash`, совпадающий с текущим планом.
 3. **git:** если в проекте есть git-репозиторий — один коммит на волну с сообщением:
    ```
    feat(wave-W): <сводка спринтов волны>
    ```
    Best-effort: если git отсутствует — пропусти шаг; если коммит не удался — упомяни это в финальном отчёте, но волну не блокируй.
-4. **Регрессия:** краткая регрессионная проверка — функционал предыдущих спринтов/волн не сломан. При обнаружении регрессии — TG (волна W) и завершение с паузой.
+4. **Регрессия:** краткая регрессионная проверка — функционал предыдущих спринтов/волн не сломан. При обнаружении регрессии — уведомление (волна W) и завершение с паузой.
 
 Затем — следующая незакрытая волна (вернись к началу цикла). Если незакрытых волн не осталось — перейди к «Финальный отчёт (волновой режим)».
 

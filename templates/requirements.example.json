@@ -48,7 +48,7 @@
       "id": "R-004",
       "title": "Тёмная тема",
       "quote": "тёмная тема — позже",
-      "source_ref": "decisions.md#D-001",
+      "source_ref": "concept.md#решения",
       "type": "constraint",
       "priority": "won't",
       "acceptance": "явный non-goal, не входит в текущий план",

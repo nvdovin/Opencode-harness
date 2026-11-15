@@ -19,6 +19,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -167,6 +168,78 @@ def sprint_number(sprint: dict[str, Any]) -> int | None:
         return int(sprint.get("sprint_number"))
     except (TypeError, ValueError):
         return None
+
+
+def canonical_plan_payload(
+    requirements: list[dict[str, Any]],
+    sprints: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Каноническое представление плана для plan_hash.
+
+    Хэш меняется при любом изменении требований, состава спринтов,
+    requirement_map, подзадач, критериев, волн, design_pages или
+    test_profile. Это защищает от переиспользования старого аудита.
+    """
+    req_items: list[dict[str, Any]] = []
+    for req in sorted(requirements, key=lambda item: str(item.get("id", "")) if isinstance(item, dict) else ""):
+        if not isinstance(req, dict):
+            continue
+        req_items.append(
+            {
+                "id": req.get("id"),
+                "title": req.get("title"),
+                "quote": req.get("quote"),
+                "source_ref": req.get("source_ref"),
+                "type": req.get("type"),
+                "priority": req.get("priority"),
+                "status": req.get("status"),
+                "acceptance": req.get("acceptance"),
+                "design": bool(req.get("design")),
+            }
+        )
+
+    sprint_items: list[dict[str, Any]] = []
+    for sprint in sorted(
+        sprints,
+        key=lambda item: (
+            sprint_number(item) if isinstance(item, dict) else 0,
+            str(item.get("name", "")) if isinstance(item, dict) else "",
+        ),
+    ):
+        if not isinstance(sprint, dict):
+            continue
+        rmap = requirement_map_of(sprint)
+        sprint_items.append(
+            {
+                "sprint_number": sprint_number(sprint),
+                "name": sprint.get("name"),
+                "description": sprint.get("description"),
+                "subtasks": sprint.get("subtasks") or [],
+                "coverage_criteria": sprint.get("coverage_criteria") or [],
+                "requirement_map": {
+                    rid: {"subtasks": refs["subtasks"], "criteria": refs["criteria"]}
+                    for rid, refs in sorted(rmap.items())
+                },
+                "design_pages": sprint.get("design_pages") or [],
+                "test_profile": sprint.get("test_profile"),
+                "wave": sprint.get("wave"),
+            }
+        )
+
+    return {"requirements": req_items, "sprints": sprint_items}
+
+
+def plan_fingerprint(
+    requirements: list[dict[str, Any]],
+    sprints: list[dict[str, Any]],
+) -> str:
+    raw = json.dumps(
+        canonical_plan_payload(requirements, sprints),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def check_plan(
@@ -454,6 +527,11 @@ def main() -> int:
     parser.add_argument("--strict-final", action="store_true", help="считать отсутствие маркера успеха ошибкой")
     parser.add_argument("--allow-deferred", action="store_true", help="разрешить backlog/non_goal для must/should")
     parser.add_argument("--require-ledger", action="store_true", help="ошибка, если requirements.json нет")
+    parser.add_argument(
+        "--print-plan-hash",
+        action="store_true",
+        help="напечатать plan_hash текущего плана и выйти (для аудита)",
+    )
     args = parser.parse_args()
 
     if args.mode == "spec" and not args.sprint:
@@ -478,6 +556,10 @@ def main() -> int:
 
     reqs = normalize_requirements(requirements_data)
     sprints = normalize_sprints(sprints_data)
+    fingerprint = plan_fingerprint(reqs, sprints)
+    if args.print_plan_hash:
+        print(fingerprint)
+        return 0
     reqs_by_id = validate_requirements(reqs, check)
 
     strict_tags = not args.legacy_ok
@@ -519,6 +601,7 @@ def main() -> int:
         "verdict": verdict,
         "mode": args.mode,
         "sprint": args.sprint,
+        "plan_hash": fingerprint,
         "errors": check.errors,
         "warnings": check.warnings,
         "requirements": len(reqs_by_id),
@@ -528,7 +611,7 @@ def main() -> int:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
         print(f"COVERAGE: {verdict}")
-        print(f"mode={args.mode} requirements={len(reqs_by_id)} sprints={len(sprints)}")
+        print(f"mode={args.mode} requirements={len(reqs_by_id)} sprints={len(sprints)} plan_hash={fingerprint}")
         for item in check.errors:
             print(f"  ERROR {item}")
         for item in check.warnings:

@@ -32,6 +32,18 @@
   концепции. Требования не выдумываются: всё, чего нет в концепции или
   решениях пользователя, помечается как `derived` и требует подтверждения.
 
+### Повторное извлечение (reconcile)
+
+- Повторный `extract` не перенумеровывает существующие R-ID.
+- Мысль сопоставляется с ledger по `quote` + `source_ref`, при изменении
+  цитаты — по `source_ref` + `title`; неоднозначность сохраняет старый ID
+  и помечается `ambiguous`.
+- Новое требование получает `R-<max+1>`; номера удалённых не переиспользуются.
+- Удалённое из концепции требование остаётся в ledger со `status: gap` и
+  пометкой в `notes`, а не исчезает молча.
+- Аудитор возвращает diff `added/updated/removed/renumbered`; список
+  `renumbered` обязан быть пустым.
+
 ## `requirement_map` в `sprints.json`
 
 Каждый спринт, участвующий в новом плане, содержит:
@@ -68,6 +80,16 @@
    подтвердил `spec N`.
 3. **Релиз/волна:** финальный аудит не пропускает следующую волну или релиз,
    если есть `must`/`should` без доказательств.
+4. **Свежесть аудита:** каждый отчёт `plan-audit.md`, `sprint-N-audit.md`,
+   `final-audit.md` содержит `plan_hash`. PASS с другим хешем — stale и не
+   считается гейтом; нужен повторный аудит.
+5. **Порядок артефактов:** `design-brief.md`, `design-audit.json` и
+   `test-strategy.*` создаются до аудита плана. Если после `COVERAGE: PASS`
+   изменились требования, план, дизайн или тест-стратегия — аудит
+   повторяется.
+6. **Перепланирование:** при новом плане `staff/coverage/` архивируется;
+   старые `sprint-N-audit.md` не переиспользуются. `sprints-done.json`,
+   `concept.md` и `requirements.json` архивируются перед сбросом.
 
 ## Обязанности агентов
 
@@ -101,6 +123,7 @@ python3 ~/.config/opencode/scripts/coverage_check.py --mode plan
 python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --sprints staff/sprints.draft.json
 python3 ~/.config/opencode/scripts/coverage_check.py --mode spec --sprint 3
 python3 ~/.config/opencode/scripts/coverage_check.py --mode final
+python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash
 ```
 
 Он проверяет схему, ссылки, обязательные поля и наличие R-ID в артефактах.

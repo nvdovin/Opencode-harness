@@ -30,7 +30,12 @@ permission:
    - Тесты/качество/релиз.
    - Явные non-goals и «не ломать X».
 3. Сохрани цитату и `source_ref` (раздел/пункт). Не переформулируй смысл; при необходимости дай короткий `title`, но `quote` оставь дословно.
-4. Присвой ID `R-001`, `R-002`, …; ID стабильны.
+4. Присвой ID `R-001`, `R-002`, …; ID стабильны. Если `staff/requirements.json` уже существует:
+   - загрузи его **до** извлечения и не перенумеровывай существующие требования;
+   - сопоставь каждую мысль с существующим требованием по нормализованным `quote` + `source_ref`; если цитата изменилась — по `source_ref` + `title`; при неоднозначности сохрани существующий ID и пометь требование `ambiguous`;
+   - новым требованиям выдавай `R-<max+1>`, не переиспользуй номера удалённых;
+   - требования, которых больше нет в концепции, не удаляй: `status: gap`, `notes: "removed from concept <дата>"`;
+   - верни diff `added/updated/removed/renumbered`; список `renumbered` обязан быть пустым.
 5. Классифицируй:
    - `type`: functional / non_functional / design / security / migration / test / content / integration / constraint;
    - `priority`: must / should / could / won't;
@@ -41,6 +46,7 @@ permission:
 9. Запиши `staff/requirements.json` по схеме ниже. Сохрани `decisions` из `concept.md`.
 10. Верни:
     - количество требований по типам/приоритетам;
+    - diff `added/updated/removed/renumbered` (renumbered должен быть пустым);
     - список `ambiguous`/`gap` с вопросами пользователю;
     - предупреждение, если требований слишком мало/много или они дублируются.
 
@@ -48,20 +54,21 @@ permission:
 
 ### `plan` — аудит плана
 
-Входы: `staff/requirements.json`, `staff/sprints.json` (или `staff/sprints.draft.json`), `staff/design-brief.md` (если есть), `staff/test-strategy.*` (если есть).
+Входы: `staff/requirements.json`, `staff/sprints.json` (или `staff/sprints.draft.json`), `staff/design-brief.md`, `staff/design-audit.json`, `staff/test-strategy.*` — если в плане есть UI/дизайн или тестовые требования, эти артефакты обязательны. Их отсутствие — `GAP`, а не «проверим позже».
 
 Проверь:
 
 1. У каждого спринта есть `requirement_map` (для нового плана; легаси — предупреждение).
 2. Каждый `must`/`should` привязан хотя бы к одному спринту, подзадаче и критерию.
-3. В `requirement_map` нет неизвестных ID; нет пустых `subtasks`/`criteria`.
+3. В `requirement_map` нет неизвестных ID; нет пустых `subtasks`/`criteria`; индексы 1-based и не выходят за границы массивов.
 4. У каждого критерия есть команда/URL/действие и ожидаемый результат; критерий бинарный.
 5. Нет критериев-сирот, не связанных ни с одним требованием (кроме явных quality gates).
 6. Нет требований, которые «упомянуты в description», но не имеют подзадачи и критерия.
-7. Дизайн-требования имеют дизайн-контракт/скриншотный критерий.
-8. Тестовые/quality-требования имеют профиль, команду и бюджет.
+7. Дизайн-требования имеют дизайн-контракт/скриншотный критерий; `design-brief.md` и `design-audit.json` созданы **до** этого аудита.
+8. Тестовые/quality-требования имеют профиль, команду и бюджет; `test-strategy.*` создана **до** этого аудита.
 9. `could`/`won't` явно помечены и не выдают себя за must.
 10. Нет противоречий между требованиями и планом.
+11. Нет stale-аудита: если `staff/coverage/plan-audit.md` существует, его `plan_hash` должен совпадать с текущим планом; иначе старый PASS недействителен.
 
 Механическая часть:
 
@@ -69,9 +76,11 @@ permission:
 python3 ~/.config/opencode/scripts/coverage_check.py --mode plan
 # для черновика:
 python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --sprints staff/sprints.draft.json
+# хэш плана (записать в отчёт):
+python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --sprints staff/sprints.draft.json --print-plan-hash
 ```
 
-Смысловую часть проверь сам. Результат — `staff/coverage/plan-audit.md` и вердикт.
+Смысловую часть проверь сам. Результат — `staff/coverage/plan-audit.md` с обязательной строкой `plan_hash: <64 hex>` и вердикт.
 
 ### `spec N` — аудит ТЗ спринта
 
@@ -95,9 +104,11 @@ python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --sprints staff
 
 ```bash
 python3 ~/.config/opencode/scripts/coverage_check.py --mode spec --sprint N
+# plan_hash текущего плана:
+python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash
 ```
 
-Результат — `staff/coverage/sprint-N-audit.md` и вердикт.
+Результат — `staff/coverage/sprint-N-audit.md` с обязательной строкой `plan_hash: <64 hex>` и вердикт. Если в старом отчёте другой `plan_hash` — это stale-аудит: перезапиши его, старый PASS не переиспользуй.
 
 ### `final` — финальный аудит
 
@@ -116,9 +127,11 @@ python3 ~/.config/opencode/scripts/coverage_check.py --mode spec --sprint N
 
 ```bash
 python3 ~/.config/opencode/scripts/coverage_check.py --mode final --strict-final
+# plan_hash текущего плана:
+python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash
 ```
 
-Результат — `staff/coverage/final-audit.md` и вердикт.
+Результат — `staff/coverage/final-audit.md` с обязательной строкой `plan_hash: <64 hex>` и вердикт.
 
 ## Схема `staff/requirements.json`
 
@@ -160,6 +173,9 @@ python3 ~/.config/opencode/scripts/coverage_check.py --mode final --strict-final
 ```markdown
 # Аудит покрытия: <режим> <номер>
 
+plan_hash: <64 hex>
+sprint_set: [1, 2, ...]
+
 ## Сводка
 - Требований: N (must X, should Y, could Z, won't W)
 - Привязано: N
@@ -181,6 +197,8 @@ COVERAGE: PASS
 
 - Доказательства > обещания: «сделано» без вывода команды/теста/скриншота — не покрытие.
 - Не принимай «упомянуто в описании» за покрытие.
+- Не принимай `COVERAGE: PASS` с чужим `plan_hash`: план изменился — аудит stale.
+- При `extract` не перенумеровывай существующие R-ID: новые получают `max+1`, удалённые — `gap`.
 - Не выдумывай требования, которых нет в концепции/решениях. `derived` — только с явной пометкой и подтверждением.
 - Не редактируй `sprints.json`, `spec.md`, `criteria.md`, код. Только ledger и отчёты аудита.
 - Не трогай `.opencode/`.
