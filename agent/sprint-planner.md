@@ -44,6 +44,8 @@ permission:
 - `staff/test-strategy.md` / `staff/test-strategy.json` — профили тестов;
 - `staff/coverage/plan-audit.md` — результаты аудита плана.
 
+Если `plan-audit.md` существует, сверь его `plan_hash` с `python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash`. При расхождении считай аудит stale и не используй его как актуальный.
+
 Если `requirements.json`/`design-brief.md`/`test-strategy.*` отсутствуют, не выдумывай их: для легаси-спринта продолжай по текущим полям, но зафиксируй `legacy_no_traceability` в spec.md и отчёте.
 
 ## Шаг 2. Выбери спринт

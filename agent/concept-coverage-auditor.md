@@ -131,7 +131,7 @@ python3 ~/.config/opencode/scripts/coverage_check.py --mode final --strict-final
 python3 ~/.config/opencode/scripts/coverage_check.py --mode plan --print-plan-hash
 ```
 
-Результат — `staff/coverage/final-audit.md` с обязательной строкой `plan_hash: <64 hex>` и вердикт.
+Результат — `staff/coverage/final-audit.md` с обязательной строкой `plan_hash: <64 hex>` и вердикт. Если в старом `final-audit.md` другой `plan_hash` — это stale-аудит: перезапиши его.
 
 ## Схема `staff/requirements.json`
 
