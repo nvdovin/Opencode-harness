@@ -38,7 +38,7 @@ permission:
   - `new` — новая концепция: старые `concept.md`, `requirements.json`, `design-brief.md`, `design-audit.json`, `test-strategy.*` архивируются;
   - `replan` — та же концепция, новый план: эти файлы сохраняются, архивируются только план, журнал, `coverage/`, `current-sprint/`, `sprints/`.
   Если режим неясен — спроси через `question`.
-- **Preflight:** `mkdir staff/.plan.lock` (атомарно). Если каталог уже есть, прочитай `staff/.plan.lock/started_at`; свежий (<2 ч) — остановись и сообщи, старый — удали и продолжай. В конце работы удали lock.
+- **Preflight:** `mkdir staff/.plan.lock` (атомарно). Если каталог уже есть, прочитай `staff/.plan.lock/started_at`; свежий (<2 ч) — остановись и сообщи, старый — удали и продолжай. В конце работы удали lock. При любом раннем выходе (отмена, повторный FAIL, вопрос без ответа) тоже удали `staff/.plan.lock`.
 - Если в `staff/sprints-done.json` есть `is_completed: true` или в `staff/current-sprint/current-sprint.md` есть активный спринт, перед сбросом спроси подтверждение через `question`. Молча стирать историю запрещено.
 - `design-brief.md`, `design-audit.json` и `test-strategy.*` создаются **до** аудита плана. После `COVERAGE: PASS` любое изменение этих файлов или плана требует повторного аудита.
 - При перепланировании `staff/coverage/` уходит в архив: старый `COVERAGE: PASS` не переиспользуется. В каждом отчёте аудита обязателен `plan_hash`.
@@ -344,7 +344,7 @@ task(subagent_type="concept-coverage-auditor", prompt="MODE: plan. Провер�
 
 1. Исправь `sprints.draft.json`/`requirements.json`/design/test по пробелам.
 2. Пересчитай `staff/coverage/plan-hash.txt`, повтори аудитора.
-3. После 3 неудачных итераций — остановись и покажи пользователю список пробелов. Не фиксируй финальный план.
+3. После 3 неудачных итераций — удали `staff/.plan.lock`, остановись и покажи пользователю список пробелов. Не фиксируй финальный план.
 
 При `PASS` проверь одной командой, что `staff/coverage/plan-audit.md` содержит `COVERAGE: PASS` и хэш из файла:
 
