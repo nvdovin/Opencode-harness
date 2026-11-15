@@ -73,18 +73,22 @@ mkdir -p "$ARCHIVE"
 # Старый план нужен как контекст даже после архивации.
 if [ -f staff/sprints.json ]; then cp staff/sprints.json "staff/backups/sprints-$TS.json"; fi
 
-# Всегда архивируем старый план, журнал, аудиты и артефакты спринтов.
-for item in sprints.json sprints-done.json coverage current-sprint sprints; do
-  if [ -e "staff/$item" ]; then mv "staff/$item" "$ARCHIVE/"; fi
+# Копируем старый план, журнал и артефакты спринтов в архив,
+# но оставляем их активными до успешной записи нового плана.
+for item in sprints.json sprints-done.json current-sprint sprints; do
+  if [ -e "staff/$item" ]; then cp -a "staff/$item" "$ARCHIVE/"; fi
 done
 
-# Режим new: архивируем также концепцию, требования, дизайн и тесты.
+# Старые аудиты убираем из активного coverage, чтобы не переиспользовать stale PASS.
+if [ -e staff/coverage ]; then mv staff/coverage "$ARCHIVE/"; fi
+mkdir -p staff/coverage
+
+# Режим new: копируем также концепцию, требования, дизайн и тесты.
 # Для replan этот блок не выполняй.
 for item in concept.md requirements.json design-brief.md design-audit.json test-strategy.md test-strategy.json; do
-  if [ -e "staff/$item" ]; then mv "staff/$item" "$ARCHIVE/"; fi
+  if [ -e "staff/$item" ]; then cp -a "staff/$item" "$ARCHIVE/"; fi
 done
 
-mkdir -p staff/coverage
 printf '%s\n' "$TS" > staff/backups/last-archive.txt
 ```
 
@@ -396,7 +400,7 @@ rm -f staff/sprints.draft.json
 
 ## 10. Сбрось трекинг
 
-Старые артефакты уже перенесены в `staff/archive/<TS>/` на шаге 1. Не архивируй повторно и не удаляй `concept.md`/`requirements.json` в режиме `replan`.
+Старые план, журнал и артефакты спринтов скопированы в `staff/archive/<TS>/` на шаге 1; старый `coverage/` перенесён туда же. Старые `current-sprint/` и `sprints/` ещё активны — удаляем их здесь. Не удаляй `concept.md`/`requirements.json` в режиме `replan`.
 
 Сбрось журнал атомарно:
 
